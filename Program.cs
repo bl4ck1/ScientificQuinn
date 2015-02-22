@@ -53,8 +53,6 @@ namespace ScientificQuinn
 
             var combo = Config.AddSubMenu(new Menu("[SQ]: Combo Settings", "Combo Settings"));
             var harass = Config.AddSubMenu(new Menu("[SQ]: Harass Settings", "Harass Settings"));
-            var laneclear = Config.AddSubMenu(new Menu("[SQ]: Laneclear Settings", "Laneclear"));
-            var jungleclear = Config.AddSubMenu(new Menu("[SQ]: Jungleclear Settings", "Jungle"));
             var drawing = Config.AddSubMenu(new Menu("[SQ]: Draw Settings", "Draw"));
 
             combo.AddItem(new MenuItem("UseQ", "Use Q").SetValue(true));
@@ -64,7 +62,6 @@ namespace ScientificQuinn
             combo.SubMenu("Advanced R Settings").AddItem(new MenuItem("php", "Player HP %").SetValue(new Slider(55, 100, 1)));
             combo.SubMenu("Advanced R Settings").AddItem(new MenuItem("enear", "Enemy Count").SetValue(new Slider(1, 5, 1)));
             combo.SubMenu("Advanced R Settings").AddItem(new MenuItem("rturret", "Don't RE into Turret Range").SetValue(true));
-            combo.AddItem(new MenuItem("UseR", "Use R in Combo [TOGGLE]").SetValue(new KeyBind('K', KeyBindType.Toggle)));
 
             combo.SubMenu("Item Settings").AddItem(new MenuItem("useGhostBlade", "Use Youmuu's Ghostblade").SetValue(true));
             combo.SubMenu("Item Settings").AddItem(new MenuItem("UseBOTRK", "Use Blade of the Ruined King").SetValue(true));
@@ -77,6 +74,18 @@ namespace ScientificQuinn
                 .AddItem(new MenuItem("HLe", "  Enemy HP Percentage").SetValue(new Slider(80, 100, 0)));
             combo.SubMenu("Summoner Settings").AddItem(new MenuItem("UseIgnite", "Use Ignite").SetValue(true));
 
+            //LANECLEARMENU
+            Config.SubMenu("[SQ]: Laneclear Settings")
+                .AddItem(new MenuItem("laneQ", "Use Q").SetValue(true));
+            Config.SubMenu("[SQ]: Laneclear Settings")
+                .AddItem(new MenuItem("laneclearmana", "Mana Percentage").SetValue(new Slider(30, 100, 0)));
+
+            //JUNGLEFARMMENU
+            Config.SubMenu("[SQ]: Jungle Settings")
+                .AddItem(new MenuItem("jungleQ", "Use Q").SetValue(true));
+            Config.SubMenu("[SQ]: Jungle Settings")
+                .AddItem(new MenuItem("jungleclearmana", "Mana Percentage").SetValue(new Slider(30, 100, 0)));
+
             drawing.AddItem(new MenuItem("Draw_Disabled", "Disable All Spell Drawings").SetValue(false));
             drawing.AddItem(new MenuItem("Qdraw", "Draw Q Range").SetValue(true));
             drawing.AddItem(new MenuItem("Edraw", "Draw E Range").SetValue(true));
@@ -86,12 +95,27 @@ namespace ScientificQuinn
             harass.AddItem(new MenuItem("harassE", "Use E").SetValue(true));
             harass.AddItem(new MenuItem("harassmana", "Mana Percentage").SetValue(new Slider(30, 100, 0)));
             Config.SubMenu("[SQ]: Misc Settings").AddItem(new MenuItem("DrawD", "Damage Indicator").SetValue(true));
+            Config.SubMenu("[SQ]: Misc Settings").AddItem(new MenuItem("interrupt", "Interrupt Spells").SetValue(true));
+            Config.SubMenu("[SQ]: Misc Settings").AddItem(new MenuItem("antigap", "AntiGapCloser").SetValue(true));
 
             Config.AddToMainMenu();
 
             Game.OnGameUpdate += Game_OnGameUpdate;
             Drawing.OnDraw += OnDraw;
             Drawing.OnEndScene += OnEndScene;
+            Interrupter.OnPossibleToInterrupt += Interrupter_OnPossibleToInterrupt;
+            AntiGapcloser.OnEnemyGapcloser += AntiGapCloser_OnEnemyGapcloser;
+        }
+        private static void Interrupter_OnPossibleToInterrupt(Obj_AI_Hero unit, InterruptableSpell spell)
+        {
+            if (E.IsReady() && unit.IsValidTarget(E.Range) && Config.Item("interrupt").GetValue<bool>())
+                E.CastOnUnit(unit);
+        }
+
+        private static void AntiGapCloser_OnEnemyGapcloser(ActiveGapcloser gapcloser)
+        {
+            if (E.IsReady() && gapcloser.Sender.IsValidTarget(E.Range) && Config.Item("antigap").GetValue<bool>())
+                E.CastOnUnit(gapcloser.Sender);
         }
 
         private static void OnEndScene(EventArgs args)
@@ -113,25 +137,48 @@ namespace ScientificQuinn
 
         private static void Game_OnGameUpdate(EventArgs args)
         {
-            var target = TargetSelector.GetTarget(Q.Range + 150, TargetSelector.DamageType.Physical);
-            var pos = Drawing.WorldToScreen(player.Position);
             {
+
                 if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.Combo)
                     combo1();
                 if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.Mixed)
                     harass();
+                if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.LaneClear)
+                    Laneclear();
                 if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.Combo && R.IsReady() && (Config.Item("UseRD").GetValue<bool>()))
                     rlogic();
-
-                if (target.IsValidTarget(Q.Range + 150))
-                    Render.Circle.DrawCircle(target.Position, 100, Color.CornflowerBlue);
+                var orbwalktarget = Orbwalker.GetTarget();
+                if (orbwalktarget.IsValidTarget())
+                    Render.Circle.DrawCircle(orbwalktarget.Position, 80, System.Drawing.Color.DodgerBlue);
+            
+            
             }
-
-            {
-            }
-
         }
+        private static void Laneclear()
+        {
 
+            var lanemana = Config.Item("laneclearmana").GetValue<Slider>().Value;
+            var junglemana = Config.Item("jungleclearmana").GetValue<Slider>().Value;
+            var jungleQ = MinionManager.GetMinions(ObjectManager.Player.ServerPosition, Q.Range + Q.Width,
+                MinionTypes.All, MinionTeam.Neutral, MinionOrderTypes.MaxHealth);
+            var laneQ = MinionManager.GetMinions(ObjectManager.Player.ServerPosition, Q.Range + Q.Width);
+         
+            var Qjunglepos = Q.GetLineFarmLocation(jungleQ, Q.Width + 30);
+
+            var Qfarmpos = Q.GetLineFarmLocation(laneQ, Q.Width + 30);
+
+            if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.LaneClear && Qjunglepos.MinionsHit >= 1 &&
+                Config.Item("jungleQ").GetValue<bool>()
+                && player.ManaPercentage() >= junglemana)
+            
+                Q.Cast(Qjunglepos.Position);
+
+            if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.LaneClear && Qfarmpos.MinionsHit >= 3 &&
+            Config.Item("laneQ").GetValue<bool>()
+            && player.ManaPercentage() >= lanemana)
+
+                Q.Cast(Qfarmpos.Position);    
+        }
         private static void harass()
         {
             var harassmana = Config.Item("harassmana").GetValue<Slider>().Value;
@@ -150,8 +197,6 @@ namespace ScientificQuinn
                 player.ManaPercentage() >= harassmana)
 
                 E.CastOnUnit(target);
-
-
         }
         private static float IgniteDamage(Obj_AI_Hero target)
         {
@@ -200,17 +245,17 @@ namespace ScientificQuinn
                 Config.Item("UseIgnite").GetValue<bool>())           
                 player.Spellbook.CastSpell(Ignite, target);
 
-            if (Q.IsReady() && target.IsValidTarget(Q.Range) && qpred.Hitchance >= HitChance.High)
+            if (Q.IsReady() && target.IsValidTarget(Q.Range) && qpred.Hitchance >= HitChance.High && Config.Item("UseQ").GetValue<bool>())
                 Q.Cast(target);
 
             if (E.IsReady() && target.HasBuff("QuinnW"))
                 return;
 
-            if (E.IsReady() && target.IsValidTarget(E.Range))
+            if (E.IsReady() && target.IsValidTarget(E.Range) && Config.Item("UseE").GetValue<bool>())
 
                 E.CastOnUnit(target);
 
-            if (E.IsReady() && target.IsValidTarget(150))
+            if (E.IsReady() && target.IsValidTarget(150) && Config.Item("UseE").GetValue<bool>())
                 E.CastOnUnit(target);
 
         }
