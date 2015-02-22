@@ -28,7 +28,7 @@ namespace ScientificQuinn
         {
             //Welcome Message upon loading assembly.
             Game.PrintChat(
-                "<font color=\"#00BFFF\">Scientific Quinn -<font color=\"#FFFFFF\"> Recommended Version Successfully Loaded.</font>");
+                "<font color=\"#00BFFF\">Scientific Quinn -<font color=\"#FFFFFF\"> BETA Version Successfully Loaded.</font>");
             CustomEvents.Game.OnGameLoad += OnLoad;
         
         }
