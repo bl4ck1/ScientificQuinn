@@ -279,10 +279,10 @@ namespace ScientificQuinn
             if (E.IsReady() && target.HasBuff("QuinnW"))
                 return;
 
-            if (E.IsReady() && target.IsValidTarget(E.Range))
+            if (E.IsReady() && target.IsValidTarget(E.Range) && Config.Item("UseE").GetValue<bool>())
                 E.CastOnUnit(target);
 
-            if (E.IsReady() && target.IsValidTarget(150))
+            if (E.IsReady() && target.IsValidTarget(150) && Config.Item("UseE").GetValue<bool>())
                 E.CastOnUnit(target);
 
         }
