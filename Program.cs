@@ -60,17 +60,22 @@ namespace ScientificQuinn
             combo.AddItem(new MenuItem("UseQ", "Use Q").SetValue(true));
             combo.AddItem(new MenuItem("UseW", "Use W").SetValue(true));
             combo.AddItem(new MenuItem("UseE", "Use E").SetValue(true));
+            combo.SubMenu("Advanced R Settings").AddItem(new MenuItem("UseRD", "Use Dynamic R Combo").SetValue(true));
+            combo.SubMenu("Advanced R Settings").AddItem(new MenuItem("php", "Player HP %").SetValue(new Slider(55, 100, 1)));
+            combo.SubMenu("Advanced R Settings").AddItem(new MenuItem("enear", "Enemy Count").SetValue(new Slider(1, 5, 1)));
+            combo.SubMenu("Advanced R Settings").AddItem(new MenuItem("rturret", "Don't RE into Turret Range").SetValue(true));
             combo.AddItem(new MenuItem("UseR", "Use R in Combo [TOGGLE]").SetValue(new KeyBind('K', KeyBindType.Toggle)));
 
-            combo.SubMenu("Item Usage").AddItem(new MenuItem("useGhostBlade", "Use Youmuu's Ghostblade").SetValue(true));
-            combo.SubMenu("Item Usage").AddItem(new MenuItem("UseBOTRK", "Use Blade of the Ruined King").SetValue(true));
-            combo.SubMenu("Item Usage")
+            combo.SubMenu("Item Settings").AddItem(new MenuItem("useGhostBlade", "Use Youmuu's Ghostblade").SetValue(true));
+            combo.SubMenu("Item Settings").AddItem(new MenuItem("UseBOTRK", "Use Blade of the Ruined King").SetValue(true));
+            combo.SubMenu("Item Settings")
                 .AddItem(new MenuItem("eL", "  Enemy HP Percentage").SetValue(new Slider(80, 100, 0)));
-            combo.SubMenu("Item Usage")
+            combo.SubMenu("Item Settings")
                 .AddItem(new MenuItem("oL", "  Own HP Percentage").SetValue(new Slider(65, 100, 0)));
-            combo.SubMenu("Item Usage").AddItem(new MenuItem("UseBilge", "Use Bilgewater Cutlass").SetValue(true));
-            combo.SubMenu("Item Usage")
+            combo.SubMenu("Item Settings").AddItem(new MenuItem("UseBilge", "Use Bilgewater Cutlass").SetValue(true));
+            combo.SubMenu("Item Settings")
                 .AddItem(new MenuItem("HLe", "  Enemy HP Percentage").SetValue(new Slider(80, 100, 0)));
+            combo.SubMenu("Summoner Settings").AddItem(new MenuItem("UseIgnite", "Use Ignite").SetValue(true));
 
             drawing.AddItem(new MenuItem("Draw_Disabled", "Disable All Spell Drawings").SetValue(false));
             drawing.AddItem(new MenuItem("Qdraw", "Draw Q Range").SetValue(true));
@@ -108,24 +113,20 @@ namespace ScientificQuinn
 
         private static void Game_OnGameUpdate(EventArgs args)
         {
+            var target = TargetSelector.GetTarget(Q.Range + 150, TargetSelector.DamageType.Physical);
             var pos = Drawing.WorldToScreen(player.Position);
             {
                 if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.Combo)
                     combo1();
                 if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.Mixed)
                     harass();
+                if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.Combo && R.IsReady() && (Config.Item("UseRD").GetValue<bool>()))
+                    rlogic();
 
-                if (Config.Item("UseR").GetValue<KeyBind>().Active)
-                    Drawing.DrawText(pos.X - 75, pos.Y + 50, Color.Orange, "[R] ComboMode ON!");
+                if (target.IsValidTarget(Q.Range + 150))
+                    Render.Circle.DrawCircle(target.Position, 100, Color.CornflowerBlue);
             }
 
-            var starget = TargetSelector.GetSelectedTarget();
-            var epos = Drawing.WorldToScreen(starget.Position);
-
-            if (starget.IsDead || starget.IsVisible == false)
-                return;
-            Drawing.DrawText(epos.X - 50, epos.Y + 60, Color.OrangeRed, "Current Target");
-            Render.Circle.DrawCircle(starget.Position, 100, Color.Red, 10);
             {
             }
 
@@ -152,7 +153,12 @@ namespace ScientificQuinn
 
 
         }
-
+        private static float IgniteDamage(Obj_AI_Hero target)
+        {
+            if (Ignite == SpellSlot.Unknown || player.Spellbook.CanUseSpell(Ignite) != SpellState.Ready)
+            return 0f;
+            return (float)player.GetSummonerSpellDamage(target, Damage.SummonerSpell.Ignite);
+        }
         private static void combo1()
         {
 
@@ -161,15 +167,9 @@ namespace ScientificQuinn
             var botrk = LeagueSharp.Common.Data.ItemData.Blade_of_the_Ruined_King.GetItem();
             var Ghost = LeagueSharp.Common.Data.ItemData.Youmuus_Ghostblade.GetItem();
             var cutlass = LeagueSharp.Common.Data.ItemData.Bilgewater_Cutlass.GetItem();
+            Ignite = player.GetSpellSlot("summonerdot");
 
-            if (target.IsValidTarget(Q.Range + 150))
-                Render.Circle.DrawCircle(target.Position, 140, Color.CornflowerBlue);
-
-            if (R.IsReady() && (Config.Item("UseR").GetValue<KeyBind>().Active))
-                rlogic();
-            if (R.IsReady() && (Config.Item("UseR").GetValue<KeyBind>().Active))
-                ASMode();
-            if (R.IsReady() && (Config.Item("UseR").GetValue<KeyBind>().Active))
+            if (player.HasBuff("quinnrtimeout") || player.HasBuff("QuinnRForm"))
                 return;
 
             if (botrk.IsReady() && botrk.IsOwned(player) && botrk.IsInRange(target)
@@ -196,6 +196,10 @@ namespace ScientificQuinn
 
                 Ghost.Cast();
 
+            if (player.Distance(target) <= 600 && IgniteDamage(target) >= target.Health &&
+                Config.Item("UseIgnite").GetValue<bool>())           
+                player.Spellbook.CastSpell(Ignite, target);
+
             if (Q.IsReady() && target.IsValidTarget(Q.Range) && qpred.Hitchance >= HitChance.High)
                 Q.Cast(target);
 
@@ -212,19 +216,27 @@ namespace ScientificQuinn
         }
 
 
-        private static bool rmode()
-        {
-            return ObjectManager.Player.Spellbook.GetSpell(SpellSlot.R).Name == "QuinnRFinale";
-        }
-
         private static void rlogic()
         {
-            var target = TargetSelector.GetSelectedTarget();
+            var target = TargetSelector.GetTarget(E.Range, TargetSelector.DamageType.Physical);
+
+            if (Config.Item("rturret").GetValue<bool>() && target.Position.UnderTurret(true))
+                return;
+
+            if (target.Position.CountEnemiesInRange(600) >= Config.Item("enear").GetValue<Slider>().Value)
+                return;
+
+            if (R.IsReady() && (Config.Item("UseRD").GetValue<bool>()) && CalcDamage(target) >= target.Health
+                && player.HealthPercentage() >= Config.Item("php").GetValue<Slider>().Value)
+                ASMode();
+
+            if (player.HasBuff("quinnrtimeout") || player.HasBuff("QuinnRForm"))
+                ASMode();
 
             if (player.HasBuff("quinnrtimeout") || player.HasBuff("QuinnRForm"))
                 return;
 
-            if (E.IsReady() && Q.IsReady() && R.IsReady() && target.IsValidTarget(1800))
+            if (E.IsReady() && Q.IsReady() && R.IsReady() && target.IsValidTarget(900))
                 R.Cast();
         }
 
@@ -233,8 +245,10 @@ namespace ScientificQuinn
             var botrk = LeagueSharp.Common.Data.ItemData.Blade_of_the_Ruined_King.GetItem();
             var Ghost = LeagueSharp.Common.Data.ItemData.Youmuus_Ghostblade.GetItem();
             var cutlass = LeagueSharp.Common.Data.ItemData.Bilgewater_Cutlass.GetItem();
+            Ignite = player.GetSpellSlot("summonerdot");
 
-            var target = TargetSelector.GetSelectedTarget();
+
+            var target = TargetSelector.GetTarget(1200, TargetSelector.DamageType.Physical);
             var ultfinisher = player.CalcDamage(target, Damage.DamageType.Physical,
                 (75 + (R.Level*55) + (player.FlatPhysicalDamageMod*0.5))*(2 - (target.Health/target.MaxHealth)));
 
@@ -254,20 +268,24 @@ namespace ScientificQuinn
             if (Q.IsReady())
                 return;
 
-            if (R.IsReady() && ultfinisher > target.Health - 200 && player.Position.CountEnemiesInRange(500) > 0)
+            if (R.IsReady() && !Ignite.IsReady() && ultfinisher > target.Health - IgniteDamage(target) &&
+                player.Position.CountEnemiesInRange(500) > 0)
+                R.Cast(player);
+
+            else if (R.IsReady() && ultfinisher > target.Health && player.Position.CountEnemiesInRange(500) > 0)
                 R.Cast(player);
         }
 
 
         private static int CalcDamage(Obj_AI_Base target)
         {
-            var AA = player.CalcDamage(target, Damage.DamageType.Physical,
+                Ignite = player.GetSpellSlot("summonerdot");
+                var AA = player.CalcDamage(target, Damage.DamageType.Physical,
                 player.FlatPhysicalDamageMod + player.BaseAttackDamage);
-            var damage = AA;
+                var damage = AA;
 
-            if (Ignite != SpellSlot.Unknown &&
-                player.Spellbook.CanUseSpell(Ignite) == SpellState.Ready)
-                damage += ObjectManager.Player.GetSummonerSpellDamage(target, Damage.SummonerSpell.Ignite);
+            if (Ignite.IsReady())
+                damage += player.GetSummonerSpellDamage(target, Damage.SummonerSpell.Ignite);
 
             if (Items.HasItem(3153) && Items.CanUseItem(3153))
                 damage += player.GetItemDamage(target, Damage.DamageItems.Botrk); //ITEM BOTRK
@@ -275,7 +293,7 @@ namespace ScientificQuinn
             if (E.IsReady() && Config.Item("UseE").GetValue<bool>()) // edamage
             {
                 damage += player.CalcDamage(target, Damage.DamageType.Physical,
-                    10 + (E.Level*30) + (player.FlatPhysicalDamageMod*0.2));
+                    10 + (E.Level*30) + (player.FlatPhysicalDamageMod*0.3));
             }
 
             if (Q.IsReady() && Config.Item("UseQ").GetValue<bool>()) // qdamage
@@ -283,17 +301,14 @@ namespace ScientificQuinn
                 damage += Q.GetDamage(target);
             }
 
-            if (rmode() && target.HasBuff("QuinnW") && !E.IsReady())
+            if (target.HasBuff("QuinnW") && !E.IsReady())
             {
                 damage += player.CalcDamage(target, Damage.DamageType.Physical,
                     15 + (player.Level*10) + (player.FlatPhysicalDamageMod*0.5)); // passive
 
 
-                if (R.IsReady() && Config.Item("UseR").GetValue<bool>()) // rdamage
-                
-                        damage += player.CalcDamage(target, Damage.DamageType.Physical,
-                            (75 + (R.Level*55) + (player.FlatPhysicalDamageMod*0.5))*
-                            (2 - ((target.Health - damage)/target.MaxHealth)));
+                if (R.IsReady() && Config.Item("UseRD").GetValue<bool>()) // rdamage              
+                        damage += (75 + (R.Level*55) + (player.FlatPhysicalDamageMod*0.5))*(2 - (target.Health/target.MaxHealth));
                     }
                     return (int) damage;
                 }
