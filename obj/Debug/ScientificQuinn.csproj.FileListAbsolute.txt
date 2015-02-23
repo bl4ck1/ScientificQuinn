@@ -7,5 +7,6 @@ c:\users\haf911\documents\visual studio 2013\Projects\ScientificQuinn\Scientific
 c:\users\haf911\documents\visual studio 2013\Projects\ScientificQuinn\ScientificQuinn\bin\Release\SharpDX.dll
 c:\users\haf911\documents\visual studio 2013\Projects\ScientificQuinn\ScientificQuinn\bin\Release\clipper_library.dll
 c:\users\haf911\documents\visual studio 2013\Projects\ScientificQuinn\ScientificQuinn\bin\Release\LeagueSharp.xml
+c:\users\haf911\documents\visual studio 2013\Projects\ScientificQuinn\ScientificQuinn\obj\Debug\ScientificQuinn.csprojResolveAssemblyReference.cache
 c:\users\haf911\documents\visual studio 2013\Projects\ScientificQuinn\ScientificQuinn\obj\Debug\ScientificQuinn.exe
 c:\users\haf911\documents\visual studio 2013\Projects\ScientificQuinn\ScientificQuinn\obj\Debug\ScientificQuinn.pdb

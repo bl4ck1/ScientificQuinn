@@ -57,6 +57,8 @@ namespace ScientificQuinn
 
             combo.AddItem(new MenuItem("UseQ", "Use Q").SetValue(true));
             combo.AddItem(new MenuItem("UseE", "Use E").SetValue(true));
+            combo.AddItem(new MenuItem("useEC", "Only use E if target gets too close").SetValue(false));
+            combo.AddItem(new MenuItem("useECs", "Target Distance").SetValue(new Slider(150, 500, 50)));
             combo.SubMenu("R Settings").AddItem(new MenuItem("UseRD", "Use Dynamic R Combo").SetValue(true));
             combo.SubMenu("R Settings").AddItem(new MenuItem("enear", "Enemy Count").SetValue(new Slider(1, 5, 1)));
             combo.SubMenu("R Settings").AddItem(new MenuItem("rturret", "Don't RE into Turret Range").SetValue(true));
@@ -197,7 +199,7 @@ namespace ScientificQuinn
             var target = TargetSelector.GetTarget(Q.Range, TargetSelector.DamageType.Physical);
             var qpred = Q.GetPrediction(target, true);
 
-            if (Q.IsReady() && qpred.Hitchance >= HitChance.High && Config.Item("harassQ").GetValue<bool>() &&
+            if (Q.IsReady() && qpred.Hitchance >= HitChance.Medium && Config.Item("harassQ").GetValue<bool>() &&
                 target.IsValidTarget(Q.Range) &&
                 player.ManaPercentage() >= harassmana)
                 Q.Cast(target);
@@ -212,6 +214,7 @@ namespace ScientificQuinn
                 player.ManaPercentage() >= harassmana)
 
                 E.CastOnUnit(target);
+                player.IssueOrder(GameObjectOrder.AutoAttack, target);
         }
         private static float IgniteDamage(Obj_AI_Hero target)
         {
@@ -282,8 +285,24 @@ namespace ScientificQuinn
             if (E.IsReady() && target.IsValidTarget(E.Range) && Config.Item("UseE").GetValue<bool>())
                 E.CastOnUnit(target);
 
-            if (E.IsReady() && target.IsValidTarget(150) && Config.Item("UseE").GetValue<bool>())
+            if (E.IsReady() && target.IsValidTarget(Config.Item("eclose").GetValue<Slider>().Value) && Config.Item("UseE").GetValue<bool>())
                 E.CastOnUnit(target);
+
+        }
+
+        private static void elogic()
+        {
+            var target = TargetSelector.GetTarget(Q.Range, TargetSelector.DamageType.Physical);
+
+            if (E.IsReady() && target.HasBuff("QuinnW"))
+                return;
+
+            if (E.IsReady() && target.IsValidTarget(Config.Item("UseECs").GetValue<Slider>().Value) && Config.Item("UseEC").GetValue<bool>())
+                E.CastOnUnit(target);
+
+            else if (E.IsReady() && target.IsValidTarget(E.Range) && Config.Item("UseEC").GetValue<bool>())
+                E.CastOnUnit(target);
+
 
         }
 
@@ -304,7 +323,7 @@ namespace ScientificQuinn
             if (player.HasBuff("quinnrtimeout") || player.HasBuff("QuinnRForm"))
                 return;
 
-            if (E.IsReady() && R.IsReady() && Q.IsReady() && target.IsValidTarget(1200) && target.CountEnemiesInRange(600) <= Config.Item("enear").GetValue<Slider>().Value)
+            if (E.IsReady() && R.IsReady() && Q.IsReady() && target.IsValidTarget(1600) && target.CountEnemiesInRange(600) <= Config.Item("enear").GetValue<Slider>().Value)
                 R.Cast();
         }
 
