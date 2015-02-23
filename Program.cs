@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.Eventing.Reader;
 using System.Linq;
 using LeagueSharp;
 using LeagueSharp.Common;
@@ -57,8 +58,8 @@ namespace ScientificQuinn
 
             combo.AddItem(new MenuItem("UseQ", "Use Q").SetValue(true));
             combo.AddItem(new MenuItem("UseE", "Use E").SetValue(true));
-            combo.AddItem(new MenuItem("useEC", "Only use E if target gets too close").SetValue(false));
-            combo.AddItem(new MenuItem("useECs", "Target Distance").SetValue(new Slider(150, 500, 50)));
+            combo.AddItem(new MenuItem("UseEC", "Only use E if target gets too close").SetValue(false));
+            combo.AddItem(new MenuItem("UseECs", "Target Distance").SetValue(new Slider(150, 650, 50)));
             combo.SubMenu("R Settings").AddItem(new MenuItem("UseRD", "Use Dynamic R Combo").SetValue(true));
             combo.SubMenu("R Settings").AddItem(new MenuItem("enear", "Enemy Count").SetValue(new Slider(1, 5, 1)));
             combo.SubMenu("R Settings").AddItem(new MenuItem("rturret", "Don't RE into Turret Range").SetValue(true));
@@ -153,6 +154,8 @@ namespace ScientificQuinn
 
                 if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.Combo)
                     combo1();
+                if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.Combo)
+                    elogic();
                 if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.Combo)
                     items();
                 if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.Mixed)
@@ -276,17 +279,9 @@ namespace ScientificQuinn
             if (player.HasBuff("quinnrtimeout") || player.HasBuff("QuinnRForm"))
                 return;
 
-            if (Q.IsReady() && target.IsValidTarget(Q.Range) && qpred.Hitchance >= HitChance.High && Config.Item("UseQ").GetValue<bool>())
+            if (Q.IsReady() && target.IsValidTarget(Q.Range) && qpred.Hitchance >= HitChance.Medium && Config.Item("UseQ").GetValue<bool>())
                 Q.Cast(target);
 
-            if (E.IsReady() && target.HasBuff("QuinnW"))
-                return;
-
-            if (E.IsReady() && target.IsValidTarget(E.Range) && Config.Item("UseE").GetValue<bool>())
-                E.CastOnUnit(target);
-
-            if (E.IsReady() && target.IsValidTarget(Config.Item("eclose").GetValue<Slider>().Value) && Config.Item("UseE").GetValue<bool>())
-                E.CastOnUnit(target);
 
         }
 
@@ -294,13 +289,19 @@ namespace ScientificQuinn
         {
             var target = TargetSelector.GetTarget(Q.Range, TargetSelector.DamageType.Physical);
 
+            if (target.HasBuff("QuinnW"))
+                player.IssueOrder(GameObjectOrder.AutoAttack, target);
+
             if (E.IsReady() && target.HasBuff("QuinnW"))
                 return;
 
-            if (E.IsReady() && target.IsValidTarget(Config.Item("UseECs").GetValue<Slider>().Value) && Config.Item("UseEC").GetValue<bool>())
+            if (Config.Item("UseEC").GetValue<bool>() && E.IsReady() && target.IsValidTarget(Config.Item("UseECs").GetValue<Slider>().Value))
                 E.CastOnUnit(target);
 
-            else if (E.IsReady() && target.IsValidTarget(E.Range) && Config.Item("UseEC").GetValue<bool>())
+            if (Config.Item("UseEC").GetValue<bool>())
+                return;
+
+             if (Config.Item("UseE").GetValue<bool>() && E.IsReady())
                 E.CastOnUnit(target);
 
 
@@ -361,7 +362,7 @@ namespace ScientificQuinn
                 player.Position.CountEnemiesInRange(500) > 0)
                 R.Cast(player);
 
-            else if (R.IsReady() && ultfinisher > target.Health && player.Position.CountEnemiesInRange(500) > 0)
+            else if (R.IsReady() && ultfinisher > target.Health - 15 * player.Level && player.Position.CountEnemiesInRange(500) > 0)
                 R.Cast(player);
         }
 
@@ -391,7 +392,7 @@ namespace ScientificQuinn
             if (target.HasBuff("QuinnW") && !E.IsReady())
                 damage += player.CalcDamage(target, Damage.DamageType.Physical,
                     15 + (player.Level*10) + (player.FlatPhysicalDamageMod*0.5)); // passive
-
+            
 
             if (Config.Item("UseRD").GetValue<bool>() && R.IsReady()) // rdamage              
                         damage += R.Level * 125 + aa*3;
@@ -417,6 +418,11 @@ namespace ScientificQuinn
                 if (Config.Item("Edraw").GetValue<bool>())
                     if (E.Level > 0)
                         Utility.DrawCircle(ObjectManager.Player.Position, E.Range - 1,
+                            E.IsReady() ? Color.Blue : Color.Red);
+
+                if (Config.Item("UseEC").GetValue<bool>())
+                    if (E.Level > 0)
+                        Utility.DrawCircle(ObjectManager.Player.Position, Config.Item("UseECs").GetValue<Slider>().Value - 1,
                             E.IsReady() ? Color.Blue : Color.Red);
 
                 if (Config.Item("Rdraw").GetValue<bool>())
