@@ -347,7 +347,7 @@ namespace ScientificQuinn
             var rmana = Config.Item("rmana").GetValue<Slider>().Value;
             var target = TargetSelector.GetTarget(1600, TargetSelector.DamageType.Physical);
 
-            if (target.Position.UnderTurret(true))
+            if (target.Position.UnderTurret(true) && Config.Item("rturret").GetValue<bool>())
                 return;
 
             if (R.IsReady() && (Config.Item("UseRD").GetValue<bool>()))
