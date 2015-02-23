@@ -146,7 +146,7 @@ namespace ScientificQuinn
 
         private static void QuinnRanges()
         {
-            //Tristana Passive Calc - Credits: Lexxes
+            
             {
                 if (player.HasBuff("quinnrtimeout") || player.HasBuff("QuinnRForm"))
                     Q.Range = 200;
