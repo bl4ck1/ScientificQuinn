@@ -399,7 +399,7 @@ namespace ScientificQuinn
                 player.Position.CountEnemiesInRange(500) > 0)
                 R.Cast(player);
 
-            else if (R.IsReady() && ultfinisher > target.Health - 10 * player.Level && player.Position.CountEnemiesInRange(500) > 0)
+            else if (R.IsReady() && ultfinisher > target.Health && player.Position.CountEnemiesInRange(500) > 0)
                 R.Cast(player);
         }
 
