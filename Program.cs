@@ -108,10 +108,40 @@ namespace ScientificQuinn
 
             Game.OnGameUpdate += Game_OnGameUpdate;
             Drawing.OnDraw += OnDraw;
+            Drawing.OnDraw += Drawings;
             Drawing.OnEndScene += OnEndScene;
             Interrupter.OnPossibleToInterrupt += Interrupter_OnPossibleToInterrupt;
             AntiGapcloser.OnEnemyGapcloser += AntiGapCloser_OnEnemyGapcloser;
             QuinnRanges();
+        }
+
+        private static void Drawings(EventArgs args)
+        {
+            if (Config.Item("Draw_Disabled").GetValue<bool>())
+                return;
+
+            var orbwalktarget = Orbwalker.GetTarget();
+            if (orbwalktarget.IsValidTarget())
+                Render.Circle.DrawCircle(orbwalktarget.Position, 80, System.Drawing.Color.DodgerBlue);   
+
+            if (Config.Item("Qdraw").GetValue<bool>())
+                if (Q.Level > 0)
+                    Utility.DrawCircle(ObjectManager.Player.Position, Q.Range,
+                        Q.IsReady() ? Color.DeepSkyBlue : Color.Red);
+
+            if (Config.Item("Edraw").GetValue<bool>())
+                if (E.Level > 0)
+                    Utility.DrawCircle(ObjectManager.Player.Position, E.Range - 1,
+                        E.IsReady() ? Color.Blue : Color.Red);
+
+            if (Config.Item("Rdraw").GetValue<bool>())
+                if (R.Level > 0)
+                    Utility.DrawCircle(ObjectManager.Player.Position, 1600 - 2,
+                        R.IsReady() ? Color.Gold : Color.Red);
+            if (Config.Item("UseEC").GetValue<bool>())
+                if (E.Level >= 0)
+                    Utility.DrawCircle(ObjectManager.Player.Position, Config.Item("UseECs").GetValue<Slider>().Value - 1,
+                        E.IsReady() ? Color.Blue : Color.Red);
         }
 
         private static void QuinnRanges()
@@ -166,16 +196,7 @@ namespace ScientificQuinn
                 if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.Mixed)
                     harass();
                 if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.LaneClear)
-                    Laneclear();
-                var orbwalktarget = Orbwalker.GetTarget();
-                if (orbwalktarget.IsValidTarget())
-                    Render.Circle.DrawCircle(orbwalktarget.Position, 80, System.Drawing.Color.DodgerBlue);
-                if (Config.Item("UseEC").GetValue<bool>())
-                    if (E.Level >= 0)
-                        Utility.DrawCircle(ObjectManager.Player.Position, Config.Item("UseECs").GetValue<Slider>().Value - 1,
-                            E.IsReady() ? Color.Blue : Color.Red);
-            
-            
+                    Laneclear();                    
             }
         }
         private static void Laneclear()
@@ -279,7 +300,7 @@ namespace ScientificQuinn
             var qpred = Q.GetPrediction(target, true);
             Ignite = player.GetSpellSlot("summonerdot");
 
-            if (R.IsReady() && target.IsValidTarget(1200) && Config.Item("UseRD").GetValue<bool>() && CalcDamage(target) >= target.Health - 15*player.Level)
+            if (R.IsReady() && target.IsValidTarget(1200) && Config.Item("UseRD").GetValue<bool>() && CalcDamage(target) >= target.Health - 20*player.Level)
                 rlogic();
 
             if (player.HasBuff("quinnrtimeout") || player.HasBuff("QuinnRForm"))
@@ -338,7 +359,7 @@ namespace ScientificQuinn
             if (player.HasBuff("quinnrtimeout") || player.HasBuff("QuinnRForm"))
                 return;
 
-            if (E.IsReady() && R.IsReady() && Q.IsReady() && target.IsValidTarget(1600)
+            if (E.IsReady() && R.IsReady() && player.Distance(target) < 1600
                 && target.CountEnemiesInRange(600) <= Config.Item("enear").GetValue<Slider>().Value &&
                 player.ManaPercentage() >= rmana)
                 R.Cast();
@@ -368,17 +389,17 @@ namespace ScientificQuinn
             if (E.IsReady())
                 E.CastOnUnit(target);
 
-            if (Q.IsReady() && target.IsValidTarget(200) && player.Position.CountEnemiesInRange(200) > 0)
+            if (Q.IsReady() && target.IsValidTarget(225) && player.Position.CountEnemiesInRange(250) > 0)
                 Q.Cast(target);
 
             if (Q.IsReady())
                 return;
 
-            if (R.IsReady() && Ignite.IsReady() && ultignite > target.Health &&
+            if (R.IsReady() && Ignite.IsReady() && ultignite > target.Health - 15 * player.Level &&
                 player.Position.CountEnemiesInRange(500) > 0)
                 R.Cast(player);
 
-            else if (R.IsReady() && ultfinisher > target.Health - 15 * player.Level && player.Position.CountEnemiesInRange(500) > 0)
+            else if (R.IsReady() && ultfinisher > target.Health - 10 * player.Level && player.Position.CountEnemiesInRange(500) > 0)
                 R.Cast(player);
         }
 
@@ -423,23 +444,6 @@ namespace ScientificQuinn
             var pos = Drawing.WorldToScreen(ObjectManager.Player.Position);
             {
 
-                if (Config.Item("Draw_Disabled").GetValue<bool>())
-                    return;
-
-                if (Config.Item("Qdraw").GetValue<bool>())
-                    if (Q.Level > 0)
-                        Utility.DrawCircle(ObjectManager.Player.Position, Q.Range,
-                            Q.IsReady() ? Color.DeepSkyBlue : Color.Red);
-
-                if (Config.Item("Edraw").GetValue<bool>())
-                    if (E.Level > 0)
-                        Utility.DrawCircle(ObjectManager.Player.Position, E.Range - 1,
-                            E.IsReady() ? Color.Blue : Color.Red);
-
-                if (Config.Item("Rdraw").GetValue<bool>())
-                    if (R.Level > 0)
-                        Utility.DrawCircle(ObjectManager.Player.Position, 1600- 2,
-                            R.IsReady() ? Color.Gold : Color.Red);
             }
         }
     }
