@@ -60,9 +60,14 @@ namespace ScientificQuinn
             combo.AddItem(new MenuItem("UseE", "Use E").SetValue(true));
             combo.AddItem(new MenuItem("UseEC", "Only use E if target gets too close").SetValue(false));
             combo.AddItem(new MenuItem("UseECs", "Target Distance").SetValue(new Slider(150, 650, 50)));
-            combo.SubMenu("R Settings").AddItem(new MenuItem("UseRD", "Use Dynamic R Combo").SetValue(true));
-            combo.SubMenu("R Settings").AddItem(new MenuItem("enear", "Enemy Count").SetValue(new Slider(1, 5, 1)));
-            combo.SubMenu("R Settings").AddItem(new MenuItem("rturret", "Don't RE into Turret Range").SetValue(true));
+            combo.SubMenu("[R] Settings").AddItem(new MenuItem("UseRD", "Use Dynamic R Combo").SetValue(true));
+            combo.SubMenu("[R] Settings").AddItem(new MenuItem("enear", "Enemy Count").SetValue(new Slider(1, 5, 1)));
+            combo.SubMenu("[R] Settings").AddItem(new MenuItem("rturret", "Don't RE into Turret Range").SetValue(true));
+
+            combo.SubMenu("ManaManager").AddItem(new MenuItem("qmana", "[Q] Mana %").SetValue(new Slider(20, 100, 0)));
+            combo.SubMenu("ManaManager").AddItem(new MenuItem("emana", "[E] Mana %").SetValue(new Slider(10, 100, 0)));
+            combo.SubMenu("ManaManager").AddItem(new MenuItem("rmana", "[R] Mana %").SetValue(new Slider(35, 100, 0)));
+
 
             combo.SubMenu("Item Settings").AddItem(new MenuItem("useGhostblade", "Use Youmuu's Ghostblade").SetValue(true));
             combo.SubMenu("Item Settings").AddItem(new MenuItem("UseBOTRK", "Use Blade of the Ruined King").SetValue(true));
@@ -165,6 +170,10 @@ namespace ScientificQuinn
                 var orbwalktarget = Orbwalker.GetTarget();
                 if (orbwalktarget.IsValidTarget())
                     Render.Circle.DrawCircle(orbwalktarget.Position, 80, System.Drawing.Color.DodgerBlue);
+                if (Config.Item("UseEC").GetValue<bool>())
+                    if (E.Level >= 0)
+                        Utility.DrawCircle(ObjectManager.Player.Position, Config.Item("UseECs").GetValue<Slider>().Value - 1,
+                            E.IsReady() ? Color.Blue : Color.Red);
             
             
             }
@@ -264,7 +273,7 @@ namespace ScientificQuinn
         }
         private static void combo1()
         {
-
+            var qmana = Config.Item("qmana").GetValue<Slider>().Value;
 
             var target = TargetSelector.GetTarget(Q.Range, TargetSelector.DamageType.Physical);
             var qpred = Q.GetPrediction(target, true);
@@ -279,7 +288,8 @@ namespace ScientificQuinn
             if (player.HasBuff("quinnrtimeout") || player.HasBuff("QuinnRForm"))
                 return;
 
-            if (Q.IsReady() && target.IsValidTarget(Q.Range) && qpred.Hitchance >= HitChance.Medium && Config.Item("UseQ").GetValue<bool>())
+            if (Q.IsReady() && target.IsValidTarget(Q.Range) && qpred.Hitchance >= HitChance.Medium && Config.Item("UseQ").GetValue<bool>() &&
+                player.ManaPercentage() >= qmana)
                 Q.Cast(target);
 
 
@@ -287,6 +297,7 @@ namespace ScientificQuinn
 
         private static void elogic()
         {
+            var emana = Config.Item("emana").GetValue<Slider>().Value;
             var target = TargetSelector.GetTarget(Q.Range, TargetSelector.DamageType.Physical);
 
             if (target.HasBuff("QuinnW"))
@@ -295,13 +306,15 @@ namespace ScientificQuinn
             if (E.IsReady() && target.HasBuff("QuinnW"))
                 return;
 
-            if (Config.Item("UseEC").GetValue<bool>() && E.IsReady() && target.IsValidTarget(Config.Item("UseECs").GetValue<Slider>().Value))
+            if (Config.Item("UseEC").GetValue<bool>() && E.IsReady() && target.IsValidTarget(Config.Item("UseECs").GetValue<Slider>().Value) &&
+                player.ManaPercentage() >= emana)
                 E.CastOnUnit(target);
 
             if (Config.Item("UseEC").GetValue<bool>())
                 return;
 
-             if (Config.Item("UseE").GetValue<bool>() && E.IsReady())
+            if (Config.Item("UseE").GetValue<bool>() && E.IsReady() &&
+               player.ManaPercentage() >= emana)
                 E.CastOnUnit(target);
 
 
@@ -310,6 +323,7 @@ namespace ScientificQuinn
 
         private static void rlogic()
         {
+            var rmana = Config.Item("rmana").GetValue<Slider>().Value;
             var target = TargetSelector.GetTarget(1600, TargetSelector.DamageType.Physical);
 
             if (target.Position.UnderTurret(true))
@@ -324,7 +338,9 @@ namespace ScientificQuinn
             if (player.HasBuff("quinnrtimeout") || player.HasBuff("QuinnRForm"))
                 return;
 
-            if (E.IsReady() && R.IsReady() && Q.IsReady() && target.IsValidTarget(1600) && target.CountEnemiesInRange(600) <= Config.Item("enear").GetValue<Slider>().Value)
+            if (E.IsReady() && R.IsReady() && Q.IsReady() && target.IsValidTarget(1600)
+                && target.CountEnemiesInRange(600) <= Config.Item("enear").GetValue<Slider>().Value &&
+                player.ManaPercentage() >= rmana)
                 R.Cast();
         }
 
@@ -418,11 +434,6 @@ namespace ScientificQuinn
                 if (Config.Item("Edraw").GetValue<bool>())
                     if (E.Level > 0)
                         Utility.DrawCircle(ObjectManager.Player.Position, E.Range - 1,
-                            E.IsReady() ? Color.Blue : Color.Red);
-
-                if (Config.Item("UseEC").GetValue<bool>())
-                    if (E.Level > 0)
-                        Utility.DrawCircle(ObjectManager.Player.Position, Config.Item("UseECs").GetValue<Slider>().Value - 1,
                             E.IsReady() ? Color.Blue : Color.Red);
 
                 if (Config.Item("Rdraw").GetValue<bool>())
