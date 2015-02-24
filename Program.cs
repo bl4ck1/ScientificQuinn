@@ -420,7 +420,7 @@ namespace ScientificQuinn
             if (Q.IsReady())
                 return;
 
-            if (R.IsReady() && Ignite.IsReady() && ultignite > target.Health - 15 * player.Level &&
+            if (R.IsReady() && Ignite.IsReady() && ultignite > target.Health &&
                 player.Position.CountEnemiesInRange(500) > 0)
                 R.Cast(player);
 
