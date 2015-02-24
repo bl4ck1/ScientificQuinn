@@ -201,6 +201,8 @@ namespace ScientificQuinn
         }
         private static void Laneclear()
         {
+            var AA = MinionManager.GetMinions(ObjectManager.Player.ServerPosition, Orbwalking.GetRealAutoAttackRange(player));
+            var AAj = MinionManager.GetMinions(ObjectManager.Player.ServerPosition, Orbwalking.GetRealAutoAttackRange(player), MinionTypes.All, MinionTeam.Neutral);
 
             var lanemana = Config.Item("laneclearmana").GetValue<Slider>().Value;
             var junglemana = Config.Item("jungleclearmana").GetValue<Slider>().Value;
@@ -212,6 +214,7 @@ namespace ScientificQuinn
 
             var Qfarmpos = Q.GetCircularFarmLocation(laneQ, Q.Width + 30);
 
+
             foreach (var minion in jungleQ)
             if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.LaneClear && Qjunglepos.MinionsHit >= 1 &&
                 Config.Item("jungleQ").GetValue<bool>()
@@ -219,12 +222,30 @@ namespace ScientificQuinn
             
                 Q.Cast(minion);
 
+            foreach (var minion in AAj)
+
+                if (minion.HasBuff("QuinnW") &&
+                    minion.Health <
+                    0.75*player.GetAutoAttackDamage(minion) + player.CalcDamage(minion, Damage.DamageType.Physical,
+                        15 + (player.Level*10) + (player.FlatPhysicalDamageMod*0.5)))
+                {
+                    Orbwalking.Orbwalk(minion, Game.CursorPos);
+                }
+
             foreach (var minion in laneQ)
             if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.LaneClear && Qfarmpos.MinionsHit >= 3 &&
             Config.Item("laneQ").GetValue<bool>()
             && player.ManaPercentage() >= lanemana)
 
-                Q.Cast(minion);    
+                Q.Cast(minion);
+
+            foreach (var minion in AA)
+                if (minion.HasBuff("QuinnW") &&
+                    minion.Health < player.GetAutoAttackDamage(minion) + player.CalcDamage(minion, Damage.DamageType.Physical,
+                        15 + (player.Level*10) + (player.FlatPhysicalDamageMod*0.5)))
+                {
+                    Orbwalking.Orbwalk(minion, Game.CursorPos);
+                }
         }
         private static void harass()
         {
@@ -341,6 +362,10 @@ namespace ScientificQuinn
 
         }
 
+        private static void wlogic()
+        {
+            
+        }
 
         private static void rlogic()
         {
