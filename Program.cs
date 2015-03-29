@@ -106,7 +106,7 @@ namespace ScientificQuinn
 
             Config.AddToMainMenu();
 
-            Game.OnGameUpdate += Game_OnGameUpdate;
+            Game.OnUpdate += Game_OnGameUpdate;
             Drawing.OnDraw += OnDraw;
             Drawing.OnDraw += Drawings;
             Drawing.OnEndScene += OnEndScene;
